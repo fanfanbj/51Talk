@@ -1,0 +1,40 @@
+#!/bin/sh
+
+page=t$1
+result=result$1.log
+temp=temp$1.log
+pre=pre$1
+
+rm -rf *.php
+rm -rf *.log
+export http_proxy=http://web-proxy.corp.hp.com:8080/
+wget  http://www.51talk.com/teacher/info/$page
+dos2unix $page
+grep -n '<th class="thtitle">' $page > time.log
+grep -n btnopen $page > btnopen.log
+cat btnopen.log >> time.log
+sort -n time.log> sorted.log
+
+mv sorted.log $result
+sed 's/^.*<th class="thtitle">//g' $result > $temp
+mv $temp $result
+sed 's/^.*DateTimeStr=//g' $result > $temp
+mv $temp $result
+sed 's/<\/th>//g' $result > $temp
+mv $temp $result
+sed 's/_.*$//g' $result > $temp
+mv $temp $result
+grep -B1 "[0-9]\{8\}" $result > $temp
+mv $temp $result
+
+if [ ! -f "$pre" ]; then
+	echo "" >  $pre 
+fi
+
+c1=`cat $result|wc -c`
+c2=`diff  $result $pre|wc -c`
+if [ "$c1" -gt 0 ] && [ "$c2" -gt 0 ]; then
+  cat $result|mail -s "51talk search teacher:$2" $3
+fi
+cp $result $pre
+
